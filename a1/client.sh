@@ -1,1 +1,1 @@
-<your client here> $1 $2 $3 "$4"
+python client.py $1 $2 $3 "$4"
