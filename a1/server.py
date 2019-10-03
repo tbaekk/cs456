@@ -1,8 +1,8 @@
 import sys
 from socket import *
 
-def check_req_code(argv):
-  if len(argv) != 1:
+def check_req_code(args):
+  if len(args) != 1:
     print("Invalid number of parameters")
     raise Exception
 
@@ -35,25 +35,23 @@ def tcp_negotiate(server_socket, req_code):
     connection_socket, addr = server_socket.accept()
     client_req_code = connection_socket.recv(1024)
     
-    message = 0
-    if not client_req_code == req_code:
-      print('Invalid request code received from client')
+    message = str(0)
+    if not int(client_req_code) == req_code:
+      print("Invalid request code received from client")
     else:
-      print('Request code received!')
       # Create UDP socket
       transmission_socket, r_port = gen_udp_socket()
-      message = str(r_port).encode()
+      message = str(r_port)
       waiting = False
 
-    connection_socket.send(message)
+    connection_socket.send(message.encode())
     connection_socket.close()
   
   return transmission_socket
 
 def udp_transfer(transmission_socket):
   message, client_addr = transmission_socket.recvfrom(2048)
-  reverse_msg = message[::-1]
-  transmission_socket.sendto(reverse_msg, client_addr)
+  transmission_socket.sendto(message, client_addr)
   transmission_socket.close()
 
 def main(argv):
@@ -64,7 +62,7 @@ def main(argv):
 
   # Create TCP socket
   server_socket, n_port = gen_tcp_socket()
-  print('SERVER_PORT={}'.format(n_port))
+  print("SERVER_PORT={}".format(n_port))
 
   while True:
     # Begin TCP Negotiation
