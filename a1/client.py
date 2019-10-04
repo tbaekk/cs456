@@ -34,13 +34,6 @@ def tcp_negotiate(server_address, n_port, req_code):
   tcp_socket.close()
   return r_port
 
-def udp_transfer(server_address, r_port, message):
-	udp_socket = socket(AF_INET, SOCK_DGRAM)
-	udp_socket.sendto(message.encode(), (server_address, r_port))
-	received_messages = udp_socket.recvfrom(2048)[0]
-	udp_socket.close()
-	return received_messages
-
 def main(argv):
   try:
     check_inputs(argv)
@@ -52,15 +45,26 @@ def main(argv):
   except Exception:
     exit(-1)
 
+  # 1. Negotiate, over TCP, a communications port
   r_port = tcp_negotiate(server_address, n_port, req_code)
   if r_port == 0:
     print("Invalid req_code.")
     exit(-1)
 
-  received_messages = udp_transfer(server_address, r_port, message)
-  print("[{}]: {}".format(r_port, received_messages))
+  # 2. Retrieving the stored messages from the server
+  udp_socket = socket(AF_INET, SOCK_DGRAM)
+  udp_socket.sendto("GET".encode(), (server_address, r_port))
 
-  exit(0)
+  received_message = ""
+  while received_message != "NO MSG.":
+    received_message = udp_socket.recvfrom(2048)[0]
+    print(received_message)
+
+  # 3. Adding a message to the server
+  udp_socket.sendto(message.encode(), (server_address, r_port))
+  udp_socket.close()
+
+  exit()
 
 # Run Client
 main(sys.argv[1:])
