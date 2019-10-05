@@ -1,13 +1,23 @@
 import sys
-from thread import *
+import queue
+import threading
+from _thread import *
 from socket import *
+
+############# GLOBAL CONSTANTS #############
 
 GET = "GET"
 TERMINATE = "TERMINATE"
-global_queue = []
-client_messages = []
+STATUS_OFF = 0
+STATUS_ON = 1
 
-def check_req_code(args):
+client_messages = []
+termination_status = queue.Queue()
+
+############################################
+
+
+def check_args(args):
   if len(args) != 1:
     print("Invalid number of parameters")
     raise Exception
@@ -35,42 +45,47 @@ def gen_udp_socket():
 
   return udp_socket, r_port
 
-def start_communication(connection_socket, server_socket, req_code):
+def start_socket(connection_socket, req_code):
+  r_port = 0
   # 1. Negotiate, over TCP, a communications port
   client_req_code = connection_socket.recv(1024).decode()
   
+  # Verify if req_code matches the one sent from client
   if not int(client_req_code) == req_code:
-    print("Invalid request code received from client")
-    connection_socket.send("0".encode())
+    connection_socket.send(str(r_port).encode())
     connection_socket.close()
+    termination_status.put(STATUS_OFF)
     return
   
-  # Create UDP socket
+  # 2. Create UDP socket
   transmission_socket, r_port = gen_udp_socket()
-  message = str(r_port)
 
-  connection_socket.send(message.encode())
+  connection_socket.send(str(r_port).encode())
   connection_socket.close()
 
-  # 2. Transfer message back to client over UDP or store message
-  while True:
-    message, client_addr = transmission_socket.recvfrom(2048)
-    if message == GET:
-      for msg in client_messages:
-        transmission_socket.sendto(msg.encode(), client_addr)
-      transmission_socket.sendto("NO MSG.".encode(), client_addr)
-    elif message == TERMINATE:
-      global_queue.append(message)
-      break
-    else:
-      client_messages.append("[{}]: {}".format(r_port, message))
-      break
+  # 3. Handle messages sent from client
 
+  # Transfer message back to client over UDP
+  message, client_addr = transmission_socket.recvfrom(2048)
+
+  if message.decode() == GET:
+    for msg in client_messages:
+      transmission_socket.sendto(msg.encode(), client_addr)
+    transmission_socket.sendto("NO MSG.".encode(), client_addr)
+
+  # Store message or termiante server
+  message, client_addr = transmission_socket.recvfrom(2048)
+  if message.decode() == TERMINATE:
+    termination_status.put(STATUS_ON)
+  else:
+    termination_status.put(STATUS_OFF)
+    client_messages.append("[{}]: {}".format(r_port, message.decode()))
+    
   transmission_socket.close()
 
-def main(argv):
+def main(args):
   try:
-    req_code = check_req_code(argv)
+    req_code = check_args(args)
   except Exception:
     exit(-1)
 
@@ -78,14 +93,14 @@ def main(argv):
   server_socket, n_port = gen_tcp_socket()
   print("SERVER_PORT={}".format(n_port))
 
+  termination_status.put(STATUS_OFF)
   while True:
-    connection_socket, addr = server_socket.accept()
-    if TERMINATE in global_queue:
+    if termination_status.get() == STATUS_ON:
       break
-    # Start new thread after new connection is accepted
-    start_new_thread(start_communication, (connection_socket, server_socket, req_code,))
-
-  exit()
+    connection_socket, addr = server_socket.accept()
+    start_new_thread(start_socket, (connection_socket,req_code,))
+  
+  server_socket.close()
 
 # Run Server
 main(sys.argv[1:])

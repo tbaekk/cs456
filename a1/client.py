@@ -1,7 +1,7 @@
 import sys
 from socket import *
 
-def check_inputs(args):
+def check_args(args):
   if len(args) != 4:
     print("Invalid number of parameters")
     raise Exception
@@ -34,14 +34,14 @@ def tcp_negotiate(server_address, n_port, req_code):
 
   return tcp_socket, r_port
 
-def main(argv):
+def main(args):
   try:
-    check_inputs(argv)
+    check_args(args)
 
-    server_address = argv[0]
-    n_port = int(argv[1])
-    req_code = int(argv[2])
-    message = argv[3]
+    server_address = args[0]
+    n_port = int(args[1])
+    req_code = int(args[2])
+    message = args[3]
   except Exception:
     exit(-1)
 
@@ -57,15 +57,15 @@ def main(argv):
 
   received_message = ""
   while received_message != "NO MSG.":
-    received_message = udp_socket.recvfrom(2048)[0]
+    received_message = udp_socket.recvfrom(2048)[0].decode()
     print(received_message)
 
   # 3. Adding a message to the server
   udp_socket.sendto(message.encode(), (server_address, r_port))
   udp_socket.close()
 
-  print('')
-  raw_input("Press any key to exit.")
+  print()
+  input("Press any key to exit.")
   tcp_socket.close()
 
   exit()
