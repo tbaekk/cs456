@@ -31,8 +31,8 @@ def tcp_negotiate(server_address, n_port, req_code):
 
   tcp_socket.send(str(req_code).encode())
   r_port = int(tcp_socket.recv(1024))
-  tcp_socket.close()
-  return r_port
+
+  return tcp_socket, r_port
 
 def main(argv):
   try:
@@ -46,7 +46,7 @@ def main(argv):
     exit(-1)
 
   # 1. Negotiate, over TCP, a communications port
-  r_port = tcp_negotiate(server_address, n_port, req_code)
+  tcp_socket, r_port = tcp_negotiate(server_address, n_port, req_code)
   if r_port == 0:
     print("Invalid req_code.")
     exit(-1)
@@ -63,6 +63,10 @@ def main(argv):
   # 3. Adding a message to the server
   udp_socket.sendto(message.encode(), (server_address, r_port))
   udp_socket.close()
+
+  print('')
+  raw_input("Press any key to exit.")
+  tcp_socket.close()
 
   exit()
 
