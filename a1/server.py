@@ -11,6 +11,10 @@ TERMINATE = "TERMINATE"
 STATUS_OFF = 0
 STATUS_ON = 1
 
+############################################
+
+############# GLOBAL VARIABLES #############
+
 client_messages = []
 termination_status = queue.Queue()
 
@@ -19,13 +23,11 @@ termination_status = queue.Queue()
 
 def check_args(args):
   if len(args) != 1:
-    print("Invalid number of parameters")
     raise Exception
 
   try:
     req_code = int(args[0])
   except:
-    print("Parameter <req_code> should be an integer")
     raise Exception
 
   return req_code
@@ -98,6 +100,7 @@ def main(args):
     if termination_status.get() == STATUS_ON:
       break
     connection_socket, addr = server_socket.accept()
+    # Start new thread after new connection is accepted
     start_new_thread(start_socket, (connection_socket,req_code,))
   
   server_socket.close()

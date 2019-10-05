@@ -3,31 +3,27 @@ from socket import *
 
 def check_args(args):
   if len(args) != 4:
-    print("Invalid number of parameters")
     raise Exception
   
+  server_address = args[0]
+  if not server_address:
+    raise Exception
+
   try:
-    server_address = args[0]
     n_port = int(args[1])
     req_code = int(args[2])
     message = args[3]
-
-    if not message or not server_address:
-      raise error
-  except error:
-    print("Values missing for required parameters")
   except:
-    print("Parameter <n_port> and <req_code> should be integers")
     raise Exception
 
-  return
+  return server_address, n_port, req_code, message
 
 def tcp_negotiate(server_address, n_port, req_code):
   try:
     tcp_socket = socket(AF_INET, SOCK_STREAM)
     tcp_socket.connect((server_address,n_port))
   except error:
-    print("Negotiation port unavailable")
+    raise error
 
   tcp_socket.send(str(req_code).encode())
   r_port = int(tcp_socket.recv(1024))
@@ -36,19 +32,17 @@ def tcp_negotiate(server_address, n_port, req_code):
 
 def main(args):
   try:
-    check_args(args)
-
-    server_address = args[0]
-    n_port = int(args[1])
-    req_code = int(args[2])
-    message = args[3]
+    server_address, n_port, req_code, message = check_args(args)
   except Exception:
     exit(-1)
 
   # 1. Negotiate, over TCP, a communications port
-  tcp_socket, r_port = tcp_negotiate(server_address, n_port, req_code)
-  if r_port == 0:
-    print("Invalid req_code.")
+  try:
+    tcp_socket, r_port = tcp_negotiate(server_address, n_port, req_code)
+    if r_port == 0:
+      print("Invalid req_code.")
+      exit(-1)
+  except error:
     exit(-1)
 
   # 2. Retrieving the stored messages from the server
@@ -66,9 +60,9 @@ def main(args):
 
   print()
   input("Press any key to exit.")
-  tcp_socket.close()
 
-  exit()
+  udp_socket.close()
+  tcp_socket.close()
 
 # Run Client
 main(sys.argv[1:])
