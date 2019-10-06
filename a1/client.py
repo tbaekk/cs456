@@ -41,7 +41,7 @@ def main(args):
     tcp_socket, r_port = tcp_negotiate(server_address, n_port, req_code)
     if r_port == 0:
       print("Invalid req_code.")
-      exit(-1)
+      raise error
   except error:
     exit(-1)
 
