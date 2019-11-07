@@ -1,0 +1,10 @@
+emulator
+./nEmulator-linux386 3000 0.0.0.0 4000 3001 0.0.0.0 2000 40 0.3 1
+
+python
+python3 receiver.py 0.0.0.0 3001 4000 output.log
+python3 sender.py 0.0.0.0 3000 2000 tiny.txt
+
+java
+java Receiver 0.0.0.0 3001 4000 output.log
+java Sender 0.0.0.0 3000 2000 medium.txt
