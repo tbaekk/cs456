@@ -1,10 +1,34 @@
+curl ifconfig.me
+
 emulator
-./nEmulator-linux386 3000 0.0.0.0 4000 3001 0.0.0.0 2000 40 0.3 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 1 0 1
 
-python
-python3 receiver.py 0.0.0.0 3001 4000 output.log
-python3 sender.py 0.0.0.0 3000 2000 tiny.txt
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 1 0.1 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 1 0.2 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 1 0.3 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 1 0.4 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 1 0.5 1
 
-java
-java Receiver 0.0.0.0 3001 4000 output.log
-java Sender 0.0.0.0 3000 2000 medium.txt
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 10 0 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 20 0 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 30 0 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 40 0 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 50 0 1
+
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 20 0.1 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 20 0.2 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 20 0.3 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 40 0.1 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 40 0.2 1
+./nEmulator-linux386 3000 0.0.0.0 4001 3002 0.0.0.0 2001 40 0.3 1
+
+./nEmulator-linux386 9009 129.97.167.47 9013 9012 129.97.167.27 9002 1 0 1
+java Receiver 129.97.167.34 9012 9013 output.log
+java Sender 129.97.167.34 9009 9002 tiny.txt
+
+python3 receiver.py 129.97.167.34 9012 9013 output.log
+python3 sender.py 129.97.167.34 9009 9002 tiny.txt
+
+002 - 129.97.167.34 (nEmulator)
+004 - 129.97.167.47 (receiver)
+008 - 129.97.167.27 (sender)
