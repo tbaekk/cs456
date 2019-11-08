@@ -1,3 +1,9 @@
+# Parameters:
+#   $1 - host address of the network emulator
+#   $2 - UDP port number used by the emulator to receive data from the sender
+#   $3 - UDP port number used by the sender to receive ACKs from the emulator
+#   $4 - name of the file to be transferred
+
 import sys
 import threading
 import time
@@ -6,14 +12,15 @@ from packet import packet
 
 WINDOW_SIZE = 10
 TIMEOUT = 0.1
-T_DATA = 0
-T_ACK = 1
+T_ACK = 0
+T_DATA = 1
 T_EOT = 2
 
 class Receiver(threading.Thread):
   
   def run(self):
     global WINDOW_SIZE
+    global T_EOT
     global client_socket
     global base
     global next_seq_num
@@ -25,25 +32,24 @@ class Receiver(threading.Thread):
       data, client_addr = client_socket.recvfrom( 2048 )
       p = packet.parse_udp_data(data)
 
-      f_ack.write(str(p.seq_num) + "\n")
-
-      prev_base = base
-      offset = base % packet.SEQ_NUM_MODULO
-      seq_num = p.seq_num
-      window_end = (offset + WINDOW_SIZE - 1) % packet.SEQ_NUM_MODULO
-
-      if p.type == 2:
+      if p.type == T_EOT:
         client_socket.close()
         t_end = time.time()
         break
+      else:
+        f_ack.write(str(p.seq_num) + "\n")
+
+      prev_base = base
+      offset = base % packet.SEQ_NUM_MODULO
+      window_end = (offset + WINDOW_SIZE - 1) % packet.SEQ_NUM_MODULO
 
       # check if within valid range
-      if seq_num >= offset and seq_num <= window_end:
-        base = base + seq_num - offset + 1
-      elif offset > window_end and (seq_num <= window_end or seq_num >= offset):
+      if p.seq_num >= offset and p.seq_num <= window_end:
+        base = base + p.seq_num - offset + 1
+      elif offset > window_end and (p.seq_num <= window_end or p.seq_num >= offset):
         lock.acquire()
-        base = base + seq_num + 1 - offset if offset <= seq_num else \
-          base + seq_num + 1 + (packet.SEQ_NUM_MODULO - offset)
+        base = base + p.seq_num + 1 - offset if offset <= p.seq_num else \
+          base + p.seq_num + 1 + (packet.SEQ_NUM_MODULO - offset)
         lock.release()
       
       if base > prev_base:
@@ -71,7 +77,7 @@ class Sender(threading.Thread):
       if next_seq_num < total_packets and next_seq_num < base + WINDOW_SIZE:
         new_packet = packet.create_packet(next_seq_num, buffer[next_seq_num])
 
-        client_socket.sendto( new_packet.get_udp_data() , (emu_addr, emu_port))
+        client_socket.sendto(new_packet.get_udp_data(), (emu_addr, emu_port))
  
         f_seqnum.write(str(next_seq_num) + "\n")
 
@@ -89,15 +95,15 @@ class Sender(threading.Thread):
 
           # resend packets
           for p in range(base, next_seq_num):
-            resent_packet = packet.create_packet(p, buffer[p])
-            client_socket.sendto( resent_packet.get_udp_data() , (emu_addr, emu_port))
+            resend_packet = packet.create_packet(p, buffer[p])
+            client_socket.sendto(resend_packet.get_udp_data(), (emu_addr, emu_port))
             f_seqnum.write(str(p) + "\n")
 
           timer = time.time()
         lock.release()
     
     # send eot
-    client_socket.sendto( packet.create_eot(next_seq_num).get_udp_data() , (emu_addr, emu_port))
+    client_socket.sendto(packet.create_eot(next_seq_num).get_udp_data(), (emu_addr, emu_port))
 
 ############# MAIN STARTS HERE #############
 
