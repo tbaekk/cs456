@@ -37,7 +37,7 @@ public class sender {
         try {
             int emuPort = Integer.parseInt(args[1]); 
             int recPort = Integer.parseInt(args[2]); 
-        } catch(NumberFormatException e) {
+        } catch (NumberFormatException e) {
             System.err.println("Sender: invalid port number given");
             System.exit(-1);
         }
@@ -209,17 +209,17 @@ public class sender {
 
             Thread.sleep(50);
 
-            packet recvPacket;
+            packet dataPacket;
             while(true) {
                 // receive ACKed packets
                 socket.receive(receivePacket);
-                recvPacket = packet.parseUDPdata(data);
+                dataPacket = packet.parseUDPdata(data);
 
-                if (recvPacket.getType() == packet.EOT) {
+                if (dataPacket.getType() == packet.EOT) {
                     break;
                 }
 
-                int seqNum = recvPacket.getSeqNum();
+                int seqNum = dataPacket.getSeqNum();
                 ackLog.println(seqNum);
 
                 if (seqNum == packetsAcked) {

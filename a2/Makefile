@@ -4,9 +4,9 @@ JC = javac
 	$(JC) $*.java
 
 CLASSES = \
-	sender.java \
-	receiver.java \
-	packet.java \
+        sender.java \
+        receiver.java \
+        packet.java \
 
 default: classes
 
