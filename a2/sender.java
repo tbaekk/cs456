@@ -30,21 +30,9 @@ public class sender {
 
     private int packetsSent = -1;
     private int packetsAcked = -1;
+    private boolean packetSendingStarted = false;
 
     public static void main(String[] args) throws Exception{
-        if (args.length != 4) {
-            System.err.println("Sender: invalid number of arguments");
-            System.exit(-1);
-        }
-        // validate emulator port
-        try {
-            int emuPort = Integer.parseInt(args[1]); 
-            int recPort = Integer.parseInt(args[2]); 
-        } catch (NumberFormatException e) {
-            System.err.println("Sender: invalid port number given");
-            System.exit(-1);
-        }
-
         sender s = new sender();
 
         // init fields
@@ -70,22 +58,46 @@ public class sender {
     }
 
     private void init(String[] args) throws Exception {
+        if (args.length != 4) {
+            System.err.println("Sender: invalid number of arguments");
+            System.exit(-1);
+        }
+        
         emulatorAddr = InetAddress.getByName(args[0]);
-        emulatorPort = Integer.parseInt(args[1]);
-        senderPort = Integer.parseInt(args[2]);
+        try {
+            // validate port numbers
+            emulatorPort = Integer.parseInt(args[1]);
+            senderPort = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            System.err.println("Sender: invalid port number given");
+            System.exit(-1);
+        }
         fileName = args[3];
-
-        socket = new DatagramSocket(senderPort);
+        
+        // create socket
+        try {
+            socket = new DatagramSocket(senderPort);
+        } catch (SocketException e) {
+            System.err.println("Sender: given port is not available");
+        }
 
         // create files
-        seqnumLog = new PrintWriter(new BufferedWriter(new FileWriter("seqnum.log")));
-        ackLog = new PrintWriter(new BufferedWriter(new FileWriter("ack.log")));
-        timeLog = new PrintWriter(new BufferedWriter(new FileWriter("time.log")));
+        try {
+            seqnumLog = new PrintWriter(new BufferedWriter(new FileWriter("seqnum.log")));
+            ackLog = new PrintWriter(new BufferedWriter(new FileWriter("ack.log")));
+            timeLog = new PrintWriter(new BufferedWriter(new FileWriter("time.log")));
+        } catch (IOException e) {
+            System.err.println("Sender: failed to create files");
+        }
 
         // make packets
-        packets = makePackets();
+        try {
+            packets = makePackets();
+        } catch (Exception e) {
+            System.err.println("Sender: failed to create packets");
+        }
 
-        // create locks
+        // create lock
         lock = new ReentrantLock();
     }
 
@@ -108,7 +120,7 @@ public class sender {
     }
 
     private ArrayList<packet> makePackets() throws Exception {        
-        ArrayList<packet> packets = new ArrayList<>();
+        ArrayList<packet> newPackets = new ArrayList<>();
         FileInputStream fis = new FileInputStream(fileName);
         
         int seqNum = 0;
@@ -117,12 +129,12 @@ public class sender {
             fis.read(bytes);
             String data = new String(bytes);
 
-            packets.add(packet.createPacket(seqNum, data));
-            seqNum = (seqNum + 1) % 32;
+            newPackets.add(packet.createPacket(seqNum, data));
+            seqNum++;
         }
         fis.close();
 
-        return packets;
+        return newPackets;
     }
 
     public void send(packet p) throws Exception {
@@ -152,14 +164,13 @@ public class sender {
         }
 
         private void sendPackets() throws Exception {
-            tStart = System.currentTimeMillis();
             // send all packets
             while (packetsAcked < packets.size() - 1) {
                 int base = packetsSent + 1;
-                int windowSizeLeft = windowSize - (packetsSent - packetsAcked);
+                int windowRemaining = windowSize - (packetsSent - packetsAcked);
 
-                if (windowSizeLeft > 0 && (packets.size() - 1) - packetsSent > 0) {
-                    int offset = Math.min(windowSizeLeft, (packets.size() - 1) - packetsSent);
+                if (windowRemaining > 0 && (packets.size() - 1) - packetsSent > 0) {
+                    int offset = Math.min(windowRemaining, (packets.size() - 1) - packetsSent);
                     if (!timerRunning) {
                         lock.lock();
                             startTimer();
@@ -168,6 +179,11 @@ public class sender {
                     }
 
                     for (int i = base; i < base + offset; i++) {
+                        if (base == 0 && !packetSendingStarted) {
+                            tStart = System.currentTimeMillis();
+                        }
+                        packetSendingStarted = true;
+
                         send(packets.get(i));
                         seqnumLog.println(packets.get(i).getSeqNum());
                     }
@@ -178,8 +194,7 @@ public class sender {
                 }
 
                 Thread.sleep(30);
-                long currentTime = System.currentTimeMillis();
-                long deltaTime = currentTime - baseTime;
+                long deltaTime = System.currentTimeMillis() - baseTime;
 
                 if (deltaTime >= timeoutLength && timerRunning) {
                     lock.lock();
@@ -190,7 +205,7 @@ public class sender {
             }
 
             // send EOT packet
-            packet eotPacket = packet.createEOT(packets.size() % 32);
+            packet eotPacket = packet.createEOT(packets.size());
             send(eotPacket);
         }
     }
@@ -213,22 +228,17 @@ public class sender {
 
             Thread.sleep(50);
 
-            packet dataPacket;
             while(true) {
                 // receive ACKed packets
                 socket.receive(receivePacket);
-                dataPacket = packet.parseUDPdata(data);
+                packet dataPacket = packet.parseUDPdata(data);
 
-                if (dataPacket.getType() == packet.EOT) {
-                    break;
-                }
+                if (dataPacket.getType() == packet.EOT) break;
 
                 int seqNum = dataPacket.getSeqNum();
                 ackLog.println(seqNum);
 
-                if (seqNum == packetsAcked) {
-                    // do nothing, wait for timeout
-                } else {
+                if (seqNum != packetsAcked) {
                     int offset = Math.floorMod((seqNum - packetsAcked), 32);
 
                     lock.lock();
@@ -236,11 +246,8 @@ public class sender {
                     lock.unlock();
 
                     lock.lock();
-                    if (packetsAcked == packetsSent) {
-                        stopTimer();
-                    } else {
-                        startTimer();
-                    }
+                        if (packetsAcked == packetsSent) stopTimer();
+                        else startTimer();
                     lock.unlock();
                 }
             }

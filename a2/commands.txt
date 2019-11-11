@@ -2,6 +2,9 @@ curl ifconfig.me
 
 emulator
 ./nEmulator-linux386 9011 129.97.167.47 9021 9031 129.97.167.27 9041 1 0 1
+./server.sh 129.97.167.34 9031 9021 output.log
+./client.sh 129.97.167.34 9011 9041 small.txt
+
 java receiver 129.97.167.34 9031 9021 output.log
 java sender 129.97.167.34 9011 9041 small.txt
 

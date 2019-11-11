@@ -11,22 +11,9 @@ public class receiver {
 
     DatagramSocket socket;
 
-    private int expect = 0;
+    private int nextSeqNum = 0;
 
     public static void main(String[] args) throws Exception{
-        if (args.length != 4) {
-            System.err.println("Receiver: invalid number of arguments");
-            System.exit(-1);
-        }
-        // validate emulator port
-        try {
-            int emuPort = Integer.parseInt(args[1]); 
-            int recPort = Integer.parseInt(args[2]); 
-        } catch (NumberFormatException e) {
-            System.err.println("Receiver: invalid port number given");
-            System.exit(-1);
-        }
-
         receiver r = new receiver();
 
         // init fields
@@ -40,16 +27,36 @@ public class receiver {
     }
 
     private void init(String[] args) throws Exception {
+        if (args.length != 4) {
+            System.err.println("Receiver: invalid number of arguments");
+            System.exit(-1);
+        }
+
         emulatorAddr = InetAddress.getByName(args[0]);
-        emulatorPort = Integer.parseInt(args[1]);
-        receiverPort = Integer.parseInt(args[2]);
+        try {
+            // validate port numbers
+            emulatorPort = Integer.parseInt(args[1]);
+            receiverPort = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            System.err.println("Receiver: invalid port number given");
+            System.exit(-1);
+        }
         fileName = args[3];
 
-        socket = new DatagramSocket(receiverPort);
+        // create socket
+        try {
+            socket = new DatagramSocket(receiverPort);
+        } catch (SocketException e) {
+            System.err.println("Receiver: given port is not available");
+        }
 
         // create files
-        outputLog = new PrintWriter(new BufferedWriter(new FileWriter(fileName)));
-        arrivalLog = new PrintWriter(new BufferedWriter(new FileWriter("arrival.log")));
+        try {
+            outputLog = new PrintWriter(new BufferedWriter(new FileWriter(fileName)));
+            arrivalLog = new PrintWriter(new BufferedWriter(new FileWriter("arrival.log")));
+        } catch (IOException e) {
+            System.err.println("Sender: failed to create files");
+        }
     }
 
     private void close() throws Exception {
@@ -70,25 +77,22 @@ public class receiver {
     }
 
     private void start() throws Exception {
-        packet dataPacket;
         while(true) {
             byte[] data = new byte[512];
             DatagramPacket receivePacket = new DatagramPacket(data, data.length);
 
             socket.receive(receivePacket);
 
-            dataPacket = packet.parseUDPdata(receivePacket.getData());
+            packet dataPacket = packet.parseUDPdata(receivePacket.getData());
 
-            int type = dataPacket.getType();
-            if (type == packet.EOT) {
+            if (dataPacket.getType() == packet.EOT) {
                 // send eot packet
                 send( packet.createEOT(dataPacket.getSeqNum()) );
                 break;
-            } else if (type == packet.DATA) {
-                // normal packets
+            } else if (dataPacket.getType() == packet.DATA) {
                 arrivalLog.println(dataPacket.getSeqNum());
 
-                if (dataPacket.getSeqNum() == expect) {
+                if (dataPacket.getSeqNum() == nextSeqNum) {
                     // send acked packet
                     send( packet.createACK(dataPacket.getSeqNum()) );
 
@@ -96,15 +100,11 @@ public class receiver {
                     byte[] bytes = dataPacket.getData();
                     outputLog.print( new String(bytes) );
 
-                    expect = (expect + 1) % 32;
+                    nextSeqNum = (nextSeqNum + 1) % 32;
                 } else {
-                    /* if packet 0 got lost, don't ACK or log */
-                    if (expect == 0) {
-                        continue;
-                    }
-                    /* Wrong packet. Send an ACK for the most recently received correct packet,
-                     and discard the currently received packet. */
-                    send( packet.createACK((expect-1) % 32) );
+                    if (nextSeqNum == 0) continue;
+                    // send ack for most recent packet
+                    send( packet.createACK(nextSeqNum - 1) );
                 }
             }
         }
