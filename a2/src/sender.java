@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class sender {
+	private static final int ACK = 0;
+	private static final int DATA = 1;
+	private static final int EOT = 2;
     private final static int windowSize = 10;
     private final static int maxDataLength = 500;
     private final static int timeoutLength = 100;
@@ -233,7 +236,7 @@ public class sender {
                 socket.receive(receivePacket);
                 packet dataPacket = packet.parseUDPdata(data);
 
-                if (dataPacket.getType() == packet.EOT) break;
+                if (dataPacket.getType() == EOT) break;
 
                 int seqNum = dataPacket.getSeqNum();
                 ackLog.println(seqNum);

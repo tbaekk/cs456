@@ -2,6 +2,10 @@ import java.io.*;
 import java.net.*;
 
 public class receiver {
+    private static final int ACK = 0;
+	private static final int DATA = 1;
+	private static final int EOT = 2;
+
     private static InetAddress emulatorAddr;
     private static int emulatorPort;
     private static int receiverPort;
@@ -85,11 +89,11 @@ public class receiver {
 
             packet dataPacket = packet.parseUDPdata(receivePacket.getData());
 
-            if (dataPacket.getType() == packet.EOT) {
+            if (dataPacket.getType() == EOT) {
                 // send eot packet
                 send( packet.createEOT(dataPacket.getSeqNum()) );
                 break;
-            } else if (dataPacket.getType() == packet.DATA) {
+            } else if (dataPacket.getType() == DATA) {
                 arrivalLog.println(dataPacket.getSeqNum());
 
                 if (dataPacket.getSeqNum() == nextSeqNum) {

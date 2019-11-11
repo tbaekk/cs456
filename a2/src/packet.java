@@ -3,10 +3,6 @@
 import java.nio.ByteBuffer;
 
 public class packet {
-	public static final int ACK = 0;
-	public static final int DATA = 1;
-	public static final int EOT = 2;
-	
 	// constants
 	private final int maxDataLength = 500;
 	private final int SeqNumModulo = 32;
