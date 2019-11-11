@@ -16,14 +16,17 @@ public class sender {
 
     private List<packet> packets;
 
-    private PrintStream seqnumLog, ackLog, timeLog;
+    private PrintWriter seqnumLog, ackLog, timeLog;
 
     private ReentrantLock lock;
 
-    DatagramSocket socket;
+    private DatagramSocket socket;
 
-    long startTime;
-    boolean timerRunning = false;
+    private long tStart;
+    private long tEnd;
+
+    private long baseTime;
+    private boolean timerRunning = false;
 
     private int packetsSent = -1;
     private int packetsAcked = -1;
@@ -75,9 +78,9 @@ public class sender {
         socket = new DatagramSocket(senderPort);
 
         // create files
-        seqnumLog = new PrintStream(new File("seqnum.log"));
-        ackLog = new PrintStream(new File("ack.log"));
-        timeLog = new PrintStream(new File("time.log"));
+        seqnumLog = new PrintWriter(new BufferedWriter(new FileWriter("seqnum.log")));
+        ackLog = new PrintWriter(new BufferedWriter(new FileWriter("ack.log")));
+        timeLog = new PrintWriter(new BufferedWriter(new FileWriter("time.log")));
 
         // make packets
         packets = makePackets();
@@ -129,7 +132,7 @@ public class sender {
     }
 
     public void startTimer() throws Exception{
-        startTime = System.currentTimeMillis();
+        baseTime = System.currentTimeMillis();
     }
 
     public void stopTimer() throws Exception {
@@ -149,7 +152,8 @@ public class sender {
         }
 
         private void sendPackets() throws Exception {
-             /* send packets to the emulator until all packets have been acknowledged */
+            tStart = System.currentTimeMillis();
+            // send all packets
             while (packetsAcked < packets.size() - 1) {
                 int base = packetsSent + 1;
                 int windowSizeLeft = windowSize - (packetsSent - packetsAcked);
@@ -175,7 +179,7 @@ public class sender {
 
                 Thread.sleep(30);
                 long currentTime = System.currentTimeMillis();
-                long deltaTime = currentTime - startTime;
+                long deltaTime = currentTime - baseTime;
 
                 if (deltaTime >= timeoutLength && timerRunning) {
                     lock.lock();
@@ -240,6 +244,9 @@ public class sender {
                     lock.unlock();
                 }
             }
+            tEnd = System.currentTimeMillis();
+
+            timeLog.println( tEnd - tStart );
         }
     }
 }

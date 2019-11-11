@@ -7,7 +7,7 @@ public class receiver {
     private static int receiverPort;
     private static String fileName;
 
-    private PrintStream outputLog, arrivalLog;
+    private PrintWriter outputLog, arrivalLog;
 
     DatagramSocket socket;
 
@@ -48,8 +48,8 @@ public class receiver {
         socket = new DatagramSocket(receiverPort);
 
         // create files
-        outputLog = new PrintStream(new File(fileName));
-        arrivalLog = new PrintStream(new File("arrival.log"));
+        outputLog = new PrintWriter(new BufferedWriter(new FileWriter(fileName)));
+        arrivalLog = new PrintWriter(new BufferedWriter(new FileWriter("arrival.log")));
     }
 
     private void close() throws Exception {
@@ -94,7 +94,7 @@ public class receiver {
 
                     // write data to file
                     byte[] bytes = dataPacket.getData();
-                    outputLog.println( new String(bytes) );
+                    outputLog.print( new String(bytes) );
 
                     expect = (expect + 1) % 32;
                 } else {
