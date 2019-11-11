@@ -1,15 +1,33 @@
 # CS456 A2
 
 ## Instructions
-To run the receivr: java receiver <host_address> <udp_port> <sender_port>
-- <host_address>: host address of the network emulator
-- <UDP port number used by the emulator to receive data from the sender>\
-- <UDP port number used by the sender to receive ACKs from the emulator>\
-- <name of the file to be transferred>
-To run the client: ./client.sh <server_address> <n_port> <req_code> <msg>
-
-## Parameters
-<server_address>: string, the IP address of the server \
-<n_port>: int, the negotiation port number of the server \
-<req_code>: int, user-specified \
-\<msg>: string, a string that you want to send
+1. Compile Java files by calling
+```
+make
+```
+2. Run nEmulator on machine1 (e.g ubuntu1604-002.student.cs.uwaterloo.ca)
+```
+./nEmulator-linux386 <emulator's receiving UDP port number in the forward (sender) direction> 
+                     <receiver’s network address>
+                     <receiver’s receiving UDP port number>
+                     <emulator's receiving UDP port number in the backward (receiver) direction>
+                     <sender’s network address>
+                     <sender’s receiving UDP port number>
+                     <maximum delay of the link in units of millisecond>
+                     <packet discard probability 0 <= p <= 1 >
+                     <verbose-mode>
+```
+3. Run Receiver on machine2 (e.g ubuntu1604-004.student.cs.uwaterloo.ca)
+```
+./server.sh <hostname for the network emulator>
+            <UDP port number used by the link emulator to receive ACKs from the receiver>
+            <UDP port number used by the receiver to receive data from the emulator>
+            <input file>
+```
+4. Run Sender on machine3 (e.g ubuntu1604-008.student.cs.uwaterloo.ca)
+```
+./client.sh <host address of the network emulator>
+            <UDP port number used by the emulator to receive data from the sender>
+            <UDP port number used by the sender to receive ACKs from the emulator>
+            <output file>
+```
